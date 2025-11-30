@@ -52,6 +52,43 @@ test/*/baseline_results.json
 test/*/optuna_summary.csv
 test/*/visualizations/
 
+# Large data files - alignment files
+*.sam
+*.bam
+*.cram
+# Explicitly block result files even in test_cases
+test/test_cases/**/results/**/*.sam
+test/test_cases/**/results/**/*.bam
+
+# Large data files - sequence files
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.fasta
+*.fa
+*.fa.gz
+*.fas
+
+# Large data files - index files
+*.bt2
+*.bt2l
+
+# Large data files - result files in test directories
+test/**/*.csv
+!test/test_cases/**/*.csv
+test/**/BitVector_Files/
+test/**/Mapping_Files/
+test/**/*_bitvectors.txt
+test/**/rejected_bvs.csv
+
+# Large report files
+test/**/*.html
+test/**/report.html
+test/**/dag.html
+
 # Keep test case data but ignore results
 !test/test_cases/
+# But explicitly ignore result files in test_cases
+test/test_cases/**/results/
 
