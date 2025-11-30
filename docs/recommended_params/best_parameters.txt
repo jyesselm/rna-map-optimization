@@ -1,0 +1,5 @@
+# Optimal Bowtie2 Parameters from Top 100 Analysis
+# Based on full_optimization results
+
+--local --no-unal --no-discordant --no-mixed -L 18 -X 200 -N 1 --score-min L,10,0.2 --mp 6,2 --rdg 8,4 --rfg 5,3 --fast-local -i S,1,2.0 --np 2 --n-ceil L,0,0.3 --gbar 6 --ma 0 -D 15 -R 4 -I 50
+

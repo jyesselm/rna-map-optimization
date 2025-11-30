@@ -1,0 +1,71 @@
+Bootstrap: docker
+From: continuumio/miniconda3:latest
+
+%files
+    # Copy environment file, package source, and optimization scripts
+    environment_optuna.yml /opt/environment_optuna.yml
+    src/rna_map /opt/src/rna_map
+    scripts/optimization /opt/scripts/optimization
+
+%environment
+    # Add conda environment bin to PATH so bowtie2, python, and other tools are available
+    export PATH=/opt/conda/envs/rna-map-optimization/bin:/opt/conda/bin:$PATH
+    export CONDA_DEFAULT_ENV=rna-map-optimization
+
+%post
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        build-essential \
+        wget \
+        curl \
+        git \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Create conda environment from environment_optuna.yml
+    /opt/conda/bin/conda env create -f /opt/environment_optuna.yml -n rna-map-optimization
+
+    # Activate environment and install rna_map package
+    . /opt/conda/etc/profile.d/conda.sh && \
+        conda activate rna-map-optimization && \
+        cd /opt/src/rna_map && \
+        python -m pip install -e .
+
+    # Clean up conda cache
+    /opt/conda/bin/conda clean -afy
+
+    # Create directories for data and results
+    mkdir -p /data /results /work
+    
+    # Make optimization scripts executable
+    chmod +x /opt/scripts/optimization/*.sh /opt/scripts/optimization/*.py 2>/dev/null || true
+
+%runscript
+    # Default: run Python with conda environment activated
+    exec /opt/conda/envs/rna-map-optimization/bin/python "$@"
+
+%labels
+    Author RNA MAP Team
+    Version 1.0.0
+    Description RNA MAP optimization container with Bowtie2, Optuna, and rna_map package
+
+%help
+    RNA MAP Optimization Container
+    
+    This container includes:
+    - Python 3.10+ with conda
+    - Bowtie2 aligner
+    - Optuna for Bayesian optimization
+    - rna_map package installed in editable mode
+    
+    Usage:
+        apptainer exec rna-map-optimization.sif python script.py
+    
+    Or activate the environment:
+        apptainer exec rna-map-optimization.sif bash
+        conda activate rna-map-optimization
+        python script.py
+    
+    Mount data directories:
+        apptainer exec -B /path/to/data:/data -B /path/to/results:/results \
+            rna-map-optimization.sif python script.py
+

@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rna-map-optimization"
+version = "0.1.0"
+description = "Parameter optimization toolkit for RNA-MAP workflows"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  { name = "Joe Yesselman", email = "jyesselm@unl.edu" }
+]
+readme = "README.md"
+dependencies = [
+    "rna-map>=1.0.0",  # From main rna-map-nextflow repository
+    "optuna>=3.0",
+    "plotly>=5.0",
+    "pandas>=1.5",
+    "numpy>=1.21",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+rna-map-optimize = "rna_map_optimization.cli:main"
+
+[tool.setuptools]
+packages = ["rna_map_optimization"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+

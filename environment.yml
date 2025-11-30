@@ -1,0 +1,29 @@
+name: rna-map-optimization
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Core Python
+  - python>=3.10
+  - pip
+
+  # Bowtie2 for alignment
+  - bowtie2
+
+  # Python dependencies for rna_map library
+  - pandas>=1.5
+  - numpy>=1.21
+  - tabulate>=0.9
+  - pyyaml>=6.0
+
+  # Optuna and visualization dependencies
+  - pip:
+    - optuna>=3.0
+    - plotly>=5.0
+    # Install main rna-map package from GitHub
+    # Note: Install manually after creating environment:
+    #   pip install git+https://github.com/jyesselm/rna_map_nextflow.git#subdirectory=python
+    # Or if published to PyPI:
+    #   pip install rna-map
+

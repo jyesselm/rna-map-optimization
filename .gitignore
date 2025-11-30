@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Optimization results
+test/results/
+test/*/results/
+test/*/index/
+*.pkl
+*.json
+!test/test_cases/**/*.json
+!config/*.json
+
+# Optuna
+*.db
+optuna_study.*
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+
+# Test outputs
+test/*/optimization_results.json
+test/*/optimization_summary.csv
+test/*/best_parameters.json
+test/*/baseline_results.json
+test/*/optuna_summary.csv
+test/*/visualizations/
+
+# Keep test case data but ignore results
+!test/test_cases/
+

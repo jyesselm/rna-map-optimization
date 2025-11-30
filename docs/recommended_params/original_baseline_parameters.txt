@@ -1,0 +1,7 @@
+# Original Baseline Bowtie2 Parameters (Before Optimization)
+
+--local --no-unal --no-discordant --no-mixed -X 1000 -L 12
+
+# This was the original default before optimization
+# Only 6 parameters were set (very minimal)
+
