@@ -87,8 +87,6 @@ test/**/*.html
 test/**/report.html
 test/**/dag.html
 
-# Keep test case data but ignore results
-!test/test_cases/
-# But explicitly ignore result files in test_cases
-test/test_cases/**/results/
+# Ignore entire test directory - test files should not be committed
+test/
 
