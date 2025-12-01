@@ -6,11 +6,12 @@ Bayesian optimization to maximize signal-to-noise ratio in RNA-MAP alignments.
 
 import json
 import pickle
+import shutil
 import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -35,6 +36,7 @@ from rna_map_optimization.bowtie2 import (
     parse_sam_quality,
     run_bowtie2_alignment,
 )
+from rna_map_optimization.config_loader import get_parameter_ranges, load_config
 from rna_map_optimization.utils import fasta_to_dict
 
 try:
@@ -75,6 +77,7 @@ def create_optuna_objective(
     mapq_cutoff: int,
     threads: int,
     optimize_threads: bool,
+    param_ranges: Optional[Dict[str, Any]] = None,
 ):
     """Create Optuna objective function.
     
@@ -87,12 +90,58 @@ def create_optuna_objective(
         mapq_cutoff: MAPQ cutoff
         threads: Number of threads (if not optimizing)
         optimize_threads: Whether to optimize threads
+        param_ranges: Optional parameter ranges from config file
         
     Returns:
         Objective function for Optuna
     """
     if optuna is None:
         raise ImportError("Optuna is not installed. Install with: pip install optuna")
+    
+    # Load default parameter ranges if not provided
+    if param_ranges is None:
+        try:
+            config = load_config()
+            param_ranges = get_parameter_ranges(config)
+        except (FileNotFoundError, Exception) as e:
+            log.warning(f"Could not load config file, using defaults: {e}")
+            param_ranges = {}
+    
+    def suggest_param_from_config(trial: optuna.Trial, param_name: str, default_func) -> Any:
+        """Suggest parameter value from config or use default function.
+        
+        Args:
+            trial: Optuna trial object
+            param_name: Name of parameter
+            default_func: Function to call if param not in config (takes trial as arg)
+            
+        Returns:
+            Suggested parameter value
+        """
+        if param_name not in param_ranges or not param_ranges:
+            return default_func(trial)
+        
+        param_config = param_ranges[param_name]
+        param_type = param_config.get("type", "categorical")
+        
+        if param_type == "int":
+            min_val = param_config.get("min", 10)
+            max_val = param_config.get("max", 30)
+            step = param_config.get("step", 1)
+            return trial.suggest_int(param_name, min_val, max_val, step=step)
+        elif param_type == "float":
+            min_val = param_config.get("min", 0.0)
+            max_val = param_config.get("max", 1.0)
+            step = param_config.get("step", None)
+            if step:
+                return trial.suggest_float(param_name, min_val, max_val, step=step)
+            else:
+                return trial.suggest_float(param_name, min_val, max_val)
+        elif param_type == "categorical":
+            options = param_config.get("options", [None])
+            return trial.suggest_categorical(param_name, options)
+        else:
+            return default_func(trial)
     
     def objective(trial: optuna.Trial) -> float:
         """Optuna objective function to maximize.
@@ -104,115 +153,105 @@ def create_optuna_objective(
             Quality score to maximize
         """
         # Core alignment parameters
-        seed_length = trial.suggest_int("seed_length", 10, 22, step=2)
-        maxins = trial.suggest_int("maxins", 200, 1200, step=100)
+        seed_length = suggest_param_from_config(
+            trial, "seed_length", 
+            lambda t: t.suggest_int("seed_length", 10, 22, step=2)
+        )
+        maxins = suggest_param_from_config(
+            trial, "maxins",
+            lambda t: t.suggest_int("maxins", 200, 1200, step=100)
+        )
         
-        # Seed mismatches (0 is most common, constrain to 0-1)
-        seed_mismatches = trial.suggest_int("seed_mismatches", 0, 1)
+        # Seed mismatches
+        seed_mismatches = suggest_param_from_config(
+            trial, "seed_mismatches",
+            lambda t: t.suggest_int("seed_mismatches", 0, 1)
+        )
         
         # Score minimum options
-        score_min_options = [
-            None,
-            "L,0,0.2",
-            "L,0,0.3",
-            "L,5,0.1",
-            "L,10,0.2",
-            "L,15,0.1",
-            "L,0,-0.6",
-            "L,0,-0.4",
-            "L,0,-0.2",
-            "L,-0.6,-0.6",
-            "G,15,0.1",
-            "G,20,8",
-            "G,20,15",
-            "G,25,10",
-            "G,30,12",
-            "G,30,15",
-            "S,10,0.1",
-            "S,15,0.2",
-            "S,20,0.15",
-            "S,25,0.2",
-            "S,30,0.1",
+        default_score_min = [
+            None, "L,0,0.2", "L,0,0.3", "L,5,0.1", "L,10,0.2", "L,15,0.1",
+            "L,0,-0.6", "L,0,-0.4", "L,0,-0.2", "L,-0.6,-0.6",
+            "G,15,0.1", "G,20,8", "G,20,15", "G,25,10", "G,30,12", "G,30,15",
+            "S,10,0.1", "S,15,0.2", "S,20,0.15", "S,25,0.2", "S,30,0.1",
         ]
+        score_min_choice = suggest_param_from_config(
+            trial, "score_min",
+            lambda t: t.suggest_categorical("score_min", default_score_min)
+        )
         
-        score_min_choice = trial.suggest_categorical("score_min", score_min_options)
-        
-        # Mismatch penalty options
-        mp_choice = trial.suggest_categorical(
-            "mismatch_penalty",
-            [None, "6,2", "4,2", "2,2"]
+        # Mismatch penalty
+        mp_choice = suggest_param_from_config(
+            trial, "mismatch_penalty",
+            lambda t: t.suggest_categorical("mismatch_penalty", [None, "6,2", "4,2", "2,2"])
         )
         
         # Gap penalties
-        gap_read_choice = trial.suggest_categorical(
-            "gap_penalty_read",
-            [None, "5,3", "6,4", "8,4"]
+        gap_read_choice = suggest_param_from_config(
+            trial, "gap_penalty_read",
+            lambda t: t.suggest_categorical("gap_penalty_read", [None, "5,3", "6,4", "8,4"])
         )
-        gap_ref_choice = trial.suggest_categorical(
-            "gap_penalty_ref",
-            [None, "5,3", "6,4", "8,4"]
+        gap_ref_choice = suggest_param_from_config(
+            trial, "gap_penalty_ref",
+            lambda t: t.suggest_categorical("gap_penalty_ref", [None, "5,3", "6,4", "8,4"])
         )
         
         # Sensitivity mode
-        sens_mode = trial.suggest_categorical(
-            "sensitivity_mode",
-            [
-                None,
-                "very-fast-local",
-                "fast-local",
-                "sensitive-local",
-                "very-sensitive-local",
-            ],
+        sens_mode = suggest_param_from_config(
+            trial, "sensitivity_mode",
+            lambda t: t.suggest_categorical("sensitivity_mode", [
+                None, "very-fast-local", "fast-local", "sensitive-local", "very-sensitive-local"
+            ])
         )
         
         # Seed interval
-        seed_interval_choice = trial.suggest_categorical(
-            "seed_interval",
-            [None, "S,1,0.5", "S,1,0.75", "S,1,1.15", "S,1,1.5", "S,1,2.0"]
+        seed_interval_choice = suggest_param_from_config(
+            trial, "seed_interval",
+            lambda t: t.suggest_categorical("seed_interval", [None, "S,1,0.5", "S,1,0.75", "S,1,1.15", "S,1,1.5", "S,1,2.0"])
         )
         
         # Non-A/C/G/T penalty
-        np_penalty_choice = trial.suggest_categorical(
-            "np_penalty",
-            [None, 0, 1, 2, 3]
+        np_penalty_choice = suggest_param_from_config(
+            trial, "np_penalty",
+            lambda t: t.suggest_categorical("np_penalty", [None, 0, 1, 2, 3])
         )
         
         # Non-A/C/G/T ceiling
-        n_ceil_choice = trial.suggest_categorical(
-            "n_ceil",
-            [None, "L,0,0.1", "L,0,0.15", "L,0,0.2", "L,0,0.3"]
+        n_ceil_choice = suggest_param_from_config(
+            trial, "n_ceil",
+            lambda t: t.suggest_categorical("n_ceil", [None, "L,0,0.1", "L,0,0.15", "L,0,0.2", "L,0,0.3"])
         )
         
         # Gap barrier
-        gbar_choice = trial.suggest_categorical(
-            "gbar",
-            [None, 0, 2, 4, 6, 8]
+        gbar_choice = suggest_param_from_config(
+            trial, "gbar",
+            lambda t: t.suggest_categorical("gbar", [None, 0, 2, 4, 6, 8])
         )
         
         # Match bonus
-        match_bonus_choice = trial.suggest_categorical(
-            "match_bonus",
-            [None, 0, 1, 2, 3]
+        match_bonus_choice = suggest_param_from_config(
+            trial, "match_bonus",
+            lambda t: t.suggest_categorical("match_bonus", [None, 0, 1, 2, 3])
         )
         
         # Extension effort
-        extension_effort_choice = trial.suggest_categorical(
-            "extension_effort",
-            [None, 5, 10, 15, 20, 25]
+        extension_effort_choice = suggest_param_from_config(
+            trial, "extension_effort",
+            lambda t: t.suggest_categorical("extension_effort", [None, 5, 10, 15, 20, 25])
         )
         
         # Repetitive seed effort
-        repetitive_effort_choice = trial.suggest_categorical(
-            "repetitive_effort",
-            [None, 1, 2, 3, 4]
+        repetitive_effort_choice = suggest_param_from_config(
+            trial, "repetitive_effort",
+            lambda t: t.suggest_categorical("repetitive_effort", [None, 1, 2, 3, 4])
         )
         
         # Minimum insert size
         minins_choice = None
         if fastq2 is not None:
-            minins_choice = trial.suggest_categorical(
-                "minins",
-                [None, 0, 50, 100, 150]
+            minins_choice = suggest_param_from_config(
+                trial, "minins",
+                lambda t: t.suggest_categorical("minins", [None, 0, 50, 100, 150])
             )
         
         # Threads
@@ -368,6 +407,8 @@ def create_optuna_objective(
     return objective
 
 
+
+
 def run_optimization(
     fasta: Path,
     fastq1: Path,
@@ -380,6 +421,7 @@ def run_optimization(
     timeout: Optional[int] = None,
     study_name: str = "bowtie2_optimization",
     storage: Optional[str] = None,
+    cleanup: bool = True,
 ) -> Dict:
     """Run Optuna optimization for Bowtie2 parameters.
     
@@ -423,6 +465,15 @@ def run_optimization(
         load_if_exists=True,
     )
     
+    # Load config for parameter ranges
+    try:
+        config = load_config()
+        param_ranges = get_parameter_ranges(config)
+        log.info("Loaded parameter ranges from config/optimization_config.yml")
+    except (FileNotFoundError, Exception) as e:
+        log.info(f"Using default parameter ranges (config not found: {e})")
+        param_ranges = None
+    
     # Create objective function
     objective = create_optuna_objective(
         index,
@@ -433,6 +484,7 @@ def run_optimization(
         mapq_cutoff,
         threads,
         optimize_threads,
+        param_ranges=param_ranges,
     )
     
     # Run optimization
@@ -545,11 +597,63 @@ def run_optimization(
     except Exception as e:
         log.warning(f"Could not generate visualizations: {e}")
     
-    return {
-        "study": study,
-        "best_params": best_params,
-        "best_bt2_args": best_bt2_args,
-        "best_value": study.best_value,
-        "best_trial": study.best_trial,
-    }
+    # Run final detailed analysis on best trial
+    best_trial_dir = results_dir / f"trial_{study.best_trial.number}"
+    best_sam_file = best_trial_dir / "aligned.sam"
+    
+    if best_sam_file.exists():
+        log.info("Running final bit vector analysis on best trial...")
+        final_bit_vector_metrics = generate_bit_vectors_and_analyze(
+            best_sam_file,
+            ref_seqs,
+            paired=fastq2 is not None,
+            qscore_cutoff=25,
+            mapq_cutoff=mapq_cutoff,
+        )
+        
+        # Save detailed final metrics
+        final_metrics_file = output_dir / "final_bit_vector_metrics.json"
+        with open(final_metrics_file, "w") as f:
+            json.dump({
+                "trial_number": study.best_trial.number,
+                "bit_vector_metrics": final_bit_vector_metrics,
+                "best_params": best_params,
+                "best_bowtie2_args": " ".join(best_bt2_args),
+            }, f, indent=2, default=str)
+        
+        log.info(f"Final analysis saved to {final_metrics_file}")
+        
+        # Update return dict with final metrics
+        final_results = {
+            "study": study,
+            "best_params": best_params,
+            "best_bt2_args": best_bt2_args,
+            "best_value": study.best_value,
+            "best_trial": study.best_trial,
+            "final_bit_vector_metrics": final_bit_vector_metrics,
+        }
+    else:
+        log.warning(f"Best trial SAM file not found: {best_sam_file}. Skipping final analysis.")
+        final_results = {
+            "study": study,
+            "best_params": best_params,
+            "best_bt2_args": best_bt2_args,
+            "best_value": study.best_value,
+            "best_trial": study.best_trial,
+        }
+    
+    # Cleanup results directory to save space
+    # All data is stored in optuna files (optuna_study.json, optuna_summary.csv, etc.)
+    if cleanup:
+        if best_sam_file.exists() and "final_bit_vector_metrics" in final_results:
+            # Final analysis complete, safe to delete results directory
+            try:
+                shutil.rmtree(results_dir)
+                log.info(f"Removed results directory: {results_dir}")
+            except Exception as e:
+                log.warning(f"Failed to remove results directory {results_dir}: {e}")
+        else:
+            log.info("Keeping results directory (final analysis not completed)")
+    
+    return final_results
 

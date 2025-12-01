@@ -1,11 +1,7 @@
 # Global optimization settings
 
 optimization:
-  # Number of parameter combinations to test (for grid search)
-  max_combinations: 200000
-
-  # Number of trials for Optuna-based optimization (if using optuna script)
-  n_trials: 20000
+  # Note: n_trials is now specified via command line (--n-trials)
 
   # Read length assumption
   read_length: 150
@@ -241,19 +237,8 @@ cluster:
   # Job name prefix
   job_name_prefix: "bt2_opt"
 
-  # Container path (Apptainer/Singularity .sif file)
-  # If set, jobs will use the container instead of conda environment
-  # Leave as null to use conda environment or set via CONTAINER_PATH env var
-  container_path: "/lustre/work/yesselmanlab/jyesselm/installs/rna_map_nextflow/rna-map-optimization.sif"
-
-# Output settings
-
-output:
-  # Base directory for all optimization results
-  base_dir: "optimization_results"
-
-  # Keep intermediate files (SAM files, etc.)
-  keep_intermediates: false
+  # Note: container_path is now specified via command line (--container-path)
+  # Note: base_dir is now specified via command line (--output-dir)
 
 # Per-case overrides (optional)
 # You can override settings for specific cases by adding entries here

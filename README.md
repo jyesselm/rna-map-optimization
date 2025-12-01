@@ -1,297 +1,232 @@
 # RNA-MAP Optimization Toolkit
 
-Parameter optimization toolkit for [RNA-MAP Nextflow workflows](https://github.com/jyesselm/rna_map_nextflow).
-
-## Overview
-
-This repository provides tools for optimizing Bowtie2 alignment parameters for RNA mutational profiling (MaP) experiments. It uses Bayesian optimization (Optuna) and grid search to find optimal parameter combinations that maximize alignment quality and mutation detection sensitivity.
-
-**Features:**
-- **Automated parameter optimization** using Optuna (Bayesian optimization)
-- **Grid search** for systematic parameter exploration
-- **Cluster-based optimization** for large-scale runs
-- **Analysis tools** for interpreting results
-- **Recommended parameters** based on extensive analysis
+Parameter optimization toolkit for RNA-MAP experiments using Bowtie2 alignment.
 
 ## Installation
 
-### Prerequisites
-
-1. **Install optimization toolkit**:
-
-   ```bash
-   # Clone this repository
-   git clone https://github.com/jyesselm/rna-map-optimization.git
-   cd rna-map-optimization
-   
-   # Install dependencies (rna-map-mini will be installed automatically)
-   conda env create -f environment.yml
-   conda activate rna-map-optimization
-   
-   # Install the package
-   pip install -e .
-   ```
-
-### Quick Setup
-
 ```bash
-# 1. Setup optimization environment
+# Clone repository
+git clone https://github.com/jyesselm/rna-map-optimization.git
+cd rna-map-optimization
+
+# Create conda environment
 conda env create -f environment.yml
 conda activate rna-map-optimization
 
-# 2. Install package (rna-map-mini installed automatically)
+# Install package
 pip install -e .
-
-# 3. Verify installation
-rna-map-optimize --help
 ```
 
 ## Quick Start
 
-### Use Recommended Parameters
-
-Recommended parameters from optimization are available in:
-- **[docs/recommended_params/best_parameters.txt](./docs/recommended_params/best_parameters.txt)** - Full parameter string
-- **[docs/BEST_PARAMETERS.md](./docs/BEST_PARAMETERS.md)** - Detailed breakdown
-
-### Run Your Own Optimization
-
-#### Example: Run with Test Case
-
-Try the optimization with the included test case:
+### Run Optimization
 
 ```bash
-# Activate environment
-conda activate rna-map-optimization
-
-# Run optimization with test_cases/case_1
-rna-map-optimize \
+rna-map-optimize optimize \
     --case-dir test_cases/case_1 \
-    --n-trials 50 \
-    --output-dir test_results
-
-# The tool automatically detects:
-# - test.fasta (reference)
-# - test_mate1.fastq (R1 reads)
-# - test_mate2.fastq (R2 reads)
-```
-
-Results will be saved to `test_results/case_1/` including:
-- Best parameter combinations
-- Optimization history visualizations
-- Trial results and statistics
-
-#### Local Optimization (Optuna - Recommended)
-
-**Option 1: Single case directory (auto-detects files) - Recommended**
-```bash
-rna-map-optimize \
-    --case-dir /path/to/case \
     --n-trials 100 \
-    --output-dir optimization_results
-```
-The tool automatically finds `*.fasta`/`*.fa` and `*_R1*.fastq`/`*_R2*.fastq` files in the directory.
-
-**Option 2: Explicit file paths**
-```bash
-rna-map-optimize \
-    --fasta reference.fasta \
-    --fastq1 reads_R1.fastq \
-    --fastq2 reads_R2.fastq \
-    --n-trials 100 \
-    --output-dir optimization_results
+    --output-dir results
 ```
 
-**Option 3: Batch mode (multiple cases)**
-```bash
-rna-map-optimize \
-    --cases-dir /path/to/cases \
-    --n-trials 100 \
-    --output-dir optimization_results
-```
-Processes all subdirectories as separate test cases.
+The tool automatically detects FASTA and FASTQ files in the case directory.
 
-**Note**: You can also use `python -m rna_map_optimization.cli` instead of `rna-map-optimize` (they're equivalent).
-
-#### Grid Search Optimization
+### Analyze Results
 
 ```bash
-python scripts/optimize_bowtie2_params.py \
-    --fasta reference.fasta \
-    --fastq1 reads_R1.fastq \
-    --fastq2 reads_R2.fastq \
-    --output-dir optimization_results
+# Collect top results
+rna-map-optimize collect-results \
+    --results-dir results \
+    --top-n 100
+
+# Analyze parameter importance
+rna-map-optimize analyze-parameters \
+    --results-dir results/case_1 \
+    --top-n 100
 ```
 
-#### Baseline Comparison
+## Building Container for Cluster
+
+### Build SIF File on Cluster
+
+1. **Load Apptainer/Singularity module:**
+   ```bash
+   module load apptainer  # or: module load singularity
+   ```
+
+2. **Build the container:**
+   ```bash
+   # From the project root directory
+   apptainer build --fakeroot rna-map-optimization.sif containers/rna-map-optimization.def
+   ```
+   
+   This will create `rna-map-optimization.sif` in the current directory. The build takes 10-20 minutes.
+   
+   **Note:** If your cluster doesn't support `--fakeroot`, you may need to use `sudo` or build on a system with root access. The definition file is located at `containers/rna-map-optimization.def`.
+
+3. **Move to accessible location:**
+   ```bash
+   # Move to a shared location accessible to compute nodes
+   mv rna-map-optimization.sif /path/to/shared/storage/
+   ```
+
+### Test Container
+
+1. **Test basic functionality:**
+   ```bash
+   apptainer exec rna-map-optimization.sif rna-map-optimize --help
+   ```
+
+2. **Test with a small case:**
+   ```bash
+   # Create test directories
+   mkdir -p test_container/{input,output}
+   cp test_cases/case_1/* test_container/input/
+   
+   # Run test (5 trials for quick test)
+   apptainer exec \
+       -B test_container/input:/data:ro \
+       -B test_container/output:/results \
+       rna-map-optimization.sif \
+       rna-map-optimize optimize \
+           --case-dir /data \
+           --output-dir /results \
+           --n-trials 5
+   
+   # Check results
+   ls test_container/output/
+   ```
+
+3. **Verify output files exist:**
+   ```bash
+   # Should see these files:
+   ls -lh test_container/output/
+   # - optuna_study.json          (best parameters)
+   # - optuna_summary.csv         (all trial results)
+   # - final_bit_vector_metrics.json  (mutation stats)
+   # - visualizations/            (HTML plots)
+   ```
+
+4. **Verify container has all dependencies:**
+   ```bash
+   apptainer exec rna-map-optimization.sif python -c "import optuna; print('✓ Optuna OK')"
+   apptainer exec rna-map-optimization.sif python -c "import rna_map_mini; print('✓ rna-map-mini OK')"
+   apptainer exec rna-map-optimization.sif bowtie2 --version
+   ```
+
+## Running on Cluster with SLURM
+
+### Example SLURM Script
+
+Create `run_optimization.sh`:
 
 ```bash
-python scripts/run_baseline_test.py \
-    --fasta reference.fasta \
-    --fastq1 reads_R1.fastq \
-    --fastq2 reads_R2.fastq \
-    --output-dir baseline_results
+#!/bin/bash
+#SBATCH --job-name=bt2_optimize
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
+#SBATCH --output=optimization_%j.out
+#SBATCH --error=optimization_%j.err
+
+# Update these paths
+CONTAINER="/path/to/rna-map-optimization.sif"
+CASE_DIR="/path/to/test_cases/case_1"
+OUTPUT_DIR="/path/to/results/case_1"
+
+# Use apptainer if available, otherwise singularity
+CONTAINER_CMD=$(command -v apptainer || command -v singularity)
+
+# Run optimization
+${CONTAINER_CMD} exec \
+    -B ${CASE_DIR}:/data:ro \
+    -B ${OUTPUT_DIR}:/results \
+    ${CONTAINER} \
+    rna-map-optimize optimize \
+        --case-dir /data \
+        --output-dir /results \
+        --n-trials 200 \
+        --threads 8
 ```
 
-#### Alignment Verification (Secondary Check)
-
-Verify alignments using alternative methods for small subsamples:
-
+Submit job:
 ```bash
-# Install optional verification dependencies
-pip install biopython  # or: pip install parasail
-
-# Verify alignments
-python scripts/verify_alignments.py \
-    --sam aligned.sam \
-    --fasta reference.fasta \
-    --fastq reads.fastq \
-    --method biopython \
-    --max-reads 100
+sbatch run_optimization.sh
 ```
 
-See [docs/ALIGNMENT_VERIFICATION.md](./docs/ALIGNMENT_VERIFICATION.md) for details.
+See `scripts/example_sbatch_container.sh` for a complete example.
 
-#### View Alignments (Human-Readable)
+## Configuration
 
-View alignments in a beautiful, human-readable format:
+Parameter search ranges are configured in `config/optimization_config.yml`. Edit this file to adjust:
+- Parameter ranges (min/max values)
+- Categorical options
+- Search space
 
+## Output Files
+
+After optimization completes, you'll find in the output directory:
+
+- `optuna_study.json` - Best parameters and study metadata
+- `optuna_summary.csv` - All trial results
+- `final_bit_vector_metrics.json` - Detailed mutation statistics
+- `visualizations/` - HTML plots of optimization history
+- `index/` - Bowtie2 index files (reusable)
+
+The `results/` directory (containing trial SAM files) is automatically removed after optimization to save space.
+
+## Command Reference
+
+### Optimize
 ```bash
-# Install optional rich library for colored output
-pip install rich
-
-# View alignments
-python scripts/view_alignments.py \
-    --sam aligned.sam \
-    --fasta reference.fasta \
-    --max-reads 10 \
-    --min-mapq 20 \
-    --output alignments.html
+rna-map-optimize optimize \
+    --case-dir DIR          # Case directory (auto-detects files)
+    --cases-dir DIR         # Batch mode (multiple cases)
+    --n-trials N            # Number of trials (default: 100)
+    --output-dir DIR        # Output directory
+    --threads N             # Threads for alignment
+    --mapq-cutoff N         # MAPQ cutoff (default: 20)
+    --keep-intermediates    # Keep trial files (default: cleanup)
 ```
 
-See [docs/VIEW_ALIGNMENTS.md](./docs/VIEW_ALIGNMENTS.md) for details.
+### Analyze Sequences
+```bash
+rna-map-optimize analyze-sequences \
+    --fasta FILE           # Input FASTA
+    --output FILE          # Output FASTA (optional)
+    --min-common-length N  # Min common sequence length
+```
 
-#### Cluster-Based Optimization
+### Collect Results
+```bash
+rna-map-optimize collect-results \
+    --results-dir DIR      # Results directory
+    --top-n N              # Top N results per case
+    --output-dir DIR       # Aggregated output
+```
 
-For large-scale optimization on a cluster, see [scripts/README.md](./scripts/README.md) for detailed instructions.
+### Analyze Parameters
+```bash
+rna-map-optimize analyze-parameters \
+    --results-dir DIR      # Results directory
+    --top-n N              # Top N trials to analyze
+    --output FILE           # JSON output (optional)
+```
 
 ## Directory Structure
 
 ```
 rna-map-optimization/
-├── README.md                      # This file
-├── LICENSE                        # Apache 2.0 License
-├── pyproject.toml                 # Python package configuration
-├── environment.yml                # Conda environment
-├── .gitignore                     # Git ignore rules
-│
-├── src/                           # Source code
-│   └── rna_map_optimization/      # Main package
-│       ├── cli.py                 # Command-line interface
-│       ├── optimizer.py           # Optuna-based optimization
-│       ├── bowtie2.py             # Bowtie2 utilities
-│       └── utils.py               # Utility functions
-│
-├── scripts/                       # Helper scripts and docs
-│   ├── cluster/                   # Cluster job scripts
-│   └── container/                 # Container build scripts
-│
-├── docs/                          # Documentation
-│   ├── README.md                 # Documentation index
-│   ├── BEST_PARAMETERS.md        # Recommended parameters
-│   ├── ALIGNMENT_VERIFICATION.md # Alignment verification guide
-│   ├── VIEW_ALIGNMENTS.md        # Alignment viewer guide
-│   ├── TOP_100_PARAMETER_ANALYSIS.md  # Analysis results
-│   ├── recommended_params/      # Parameter files
-│   ├── examples/                 # Example scripts
-│   └── archive/                  # Historical documentation
-│
-├── config/                        # Configuration files
-│   └── slurm_optimized.config    # SLURM config for cluster
-│
-└── test/                          # Test cases and results
-    ├── test_cases/                # Small test data (committed)
-    └── results/                   # Optimization results (gitignored)
+├── src/rna_map_optimization/  # Main package
+├── containers/                # Container build files
+│   ├── rna-map-optimization.def  # Apptainer definition
+│   └── Dockerfile            # Docker build file
+├── scripts/                   # Helper scripts
+├── config/                    # Configuration files
+└── test_cases/               # Test data
 ```
-
-## Recommended Parameters
-
-From analysis of top 100 parameter combinations:
-
-**Constants (use these always):**
-- Seed length: 18
-- Mismatch penalty: 6,2
-- Gap penalties: read=8,4, ref=5,3
-- Sensitivity: fast-local
-- Min insert size: 50
-
-**Recommended defaults:**
-- Max insert size: 200
-- Seed mismatches: 1
-- Score minimum: L,10,0.2
-- Repetitive effort: 4
-
-See **[docs/TOP_100_PARAMETER_ANALYSIS.md](./docs/TOP_100_PARAMETER_ANALYSIS.md)** for complete analysis.
-
-## Documentation
-
-### Essential Guides
-- **[docs/BEST_PARAMETERS.md](./docs/BEST_PARAMETERS.md)** - Recommended parameters and usage
-- **[docs/TOP_100_PARAMETER_ANALYSIS.md](./docs/TOP_100_PARAMETER_ANALYSIS.md)** - Detailed analysis results
-- **[scripts/README.md](./scripts/README.md)** - Cluster-based optimization guide
-
-### API Reference
-- Optimization scripts are command-line tools
-- Can be imported as Python modules for programmatic use
-- See script docstrings for API details
-
-## Usage Examples
-
-### Quick Optimization (Local)
-
-```bash
-conda activate rna-map-optimization
-rna-map-optimize \
-    --case-dir test_cases/case_1 \
-    --n-trials 50 \
-    --output-dir results
-```
-
-### Cluster Optimization
-
-See [scripts/README.md](./scripts/README.md) for detailed cluster workflow.
-
-## Results and Analysis
-
-Optimization results include:
-- Best parameter combinations
-- Quality scores and statistics
-- Comparison with baseline
-- Visualization of optimization history (Optuna)
-
-## Relationship to RNA-MAP-Mini
-
-This optimization toolkit depends on [rna-map-mini](https://github.com/jyesselm/rna-map-mini):
-
-- **rna-map-mini**: Core Python package for RNA-MAP analysis
-- **This repo**: Parameter optimization and research tools
-
-The optimization code uses the `rna-map-mini` Python package to execute pipelines and evaluate results.
-
-## Contributing
-
-Contributions are welcome! Please see the main repository for contribution guidelines.
 
 ## License
 
-Apache License 2.0 - See [LICENSE](./LICENSE) file for details.
-
-## Citation
-
-If you use this optimization toolkit, please cite the rna-map-mini repository.
-
-## Support
-
-For issues and questions:
-- Optimization-specific: Open an issue in this repository
-- Core analysis: Open an issue in [rna-map-mini](https://github.com/jyesselm/rna-map-mini)
+Apache License 2.0

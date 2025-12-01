@@ -185,7 +185,7 @@ This automatically:
 conda activate rna-map-optimization
 
 # Collect top 100 from each case
-python scripts/optimization/collect_top_results.py \
+rna-map-optimize collect-results \
     --results-dir optimization_results \
     --top-n 100 \
     --output-dir optimization_results/aggregated
@@ -210,7 +210,7 @@ The collection script creates:
 
 ```bash
 # Only include results with quality_score >= 0.8
-python scripts/optimization/collect_top_results.py \
+rna-map-optimize collect-results \
     --results-dir optimization_results \
     --top-n 100 \
     --min-quality 0.8

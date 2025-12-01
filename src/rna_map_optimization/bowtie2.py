@@ -347,19 +347,31 @@ def generate_bit_vectors_and_analyze(
         total_weight = 0
         for ref_name, mh in mut_histos.items():
             if mh.num_aligned > 0:
-                snr = mh.get_signal_to_noise()
+                try:
+                    snr = mh.get_signal_to_noise()
+                    # Check if SNR is valid (not NaN or None)
+                    if snr is None or (isinstance(snr, float) and (snr != snr or snr == float('inf') or snr == float('-inf'))):
+                        log.warning(f"Invalid SNR for {ref_name}: {snr}, using 0.0")
+                        snr = 0.0
+                except Exception as e:
+                    log.warning(f"Error calculating SNR for {ref_name}: {e}, using 0.0")
+                    snr = 0.0
+                
                 total_snr += snr * mh.num_aligned
                 total_weight += mh.num_aligned
 
                 metrics["constructs"][ref_name] = {
                     "aligned_reads": mh.num_aligned,
                     "signal_to_noise": snr,
-                    "sequence_length": len(mh.ref_seq),
+                    "sequence_length": len(ref_seqs[ref_name]) if ref_name in ref_seqs else 0,
                     "total_reads": mh.num_reads,
                 }
 
         if total_weight > 0:
             metrics["signal_to_noise"] = total_snr / total_weight
+        else:
+            log.warning("No aligned reads found, signal_to_noise set to 0.0")
+            metrics["signal_to_noise"] = 0.0
 
         if metrics["accepted_bit_vectors"] > 0:
             metrics["avg_mutations_per_read"] = (
@@ -373,6 +385,8 @@ def generate_bit_vectors_and_analyze(
 
     except Exception as e:
         log.warning(f"Error generating bit vectors: {e}")
+        import traceback
+        log.warning(f"Traceback: {traceback.format_exc()}")
 
     return metrics
 

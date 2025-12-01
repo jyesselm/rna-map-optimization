@@ -200,6 +200,29 @@ def format_analysis_report(analysis: Dict[str, Any], best_bt2_args: List[str]) -
     lines.append(f"  Bit Vectors Accepted: {metrics['bv_accepted']:,}")
     lines.append("")
     
+    # Final bit vector metrics (detailed mutation statistics)
+    if "final_bit_vector_metrics" in best:
+        bv_metrics = best["final_bit_vector_metrics"]
+        lines.append("Final Bit Vector Analysis:")
+        lines.append(f"  Total Bit Vectors: {bv_metrics.get('total_bit_vectors', 0):,}")
+        lines.append(f"  Accepted Bit Vectors: {bv_metrics.get('accepted_bit_vectors', 0):,}")
+        lines.append(f"  Rejected (Low MAPQ): {bv_metrics.get('rejected_low_mapq', 0):,}")
+        lines.append(f"  Total Mutations: {bv_metrics.get('total_mutations', 0):,}")
+        lines.append(f"  Average Mutations per Read: {bv_metrics.get('avg_mutations_per_read', 0.0):.2f}")
+        lines.append(f"  Reads with Mutations: {bv_metrics.get('reads_with_mutations', 0):,}")
+        lines.append(f"  Reads without Mutations: {bv_metrics.get('reads_without_mutations', 0):,}")
+        lines.append(f"  Average Coverage: {bv_metrics.get('avg_coverage', 0.0):.1f} positions")
+        
+        # Mutation distribution
+        mut_dist = bv_metrics.get('mutation_distribution', {})
+        if mut_dist:
+            lines.append("  Mutation Distribution:")
+            sorted_dist = sorted(mut_dist.items(), key=lambda x: int(x[0]) if str(x[0]).isdigit() else 0)
+            for mut_count, read_count in sorted_dist[:10]:  # Show top 10
+                pct = (read_count / bv_metrics.get('accepted_bit_vectors', 1)) * 100
+                lines.append(f"    {mut_count} mutations: {read_count:,} reads ({pct:.1f}%)")
+        lines.append("")
+    
     # Per-construct statistics
     if best["constructs"]:
         lines.append("Per-Construct Statistics:")
