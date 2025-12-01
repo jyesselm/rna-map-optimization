@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y \
         git \
         && rm -rf /var/lib/apt/lists/*
 
+# Configure git to allow cloning into /tmp (fixes "dubious ownership" error)
+# This is needed for pip to clone rna-map-mini from GitHub
+RUN git config --global --add safe.directory '*'
+
 # Copy environment file and optimization scripts
 COPY environment.yml /opt/environment.yml
 COPY scripts/ /opt/scripts/

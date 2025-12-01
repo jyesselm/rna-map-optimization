@@ -22,6 +22,7 @@ from rna_map_optimization.utils import (
     format_analysis_report,
     generate_detailed_analysis,
 )
+from rna_map_optimization.comprehensive_analysis import run_comprehensive_analysis
 
 
 def find_fastq_files(case_dir: Path) -> tuple[Optional[Path], Optional[Path]]:
@@ -1175,6 +1176,58 @@ def analyze_parameters(
     if output:
         click.echo(f"Full analysis saved to: {output}")
     click.echo("")
+
+
+@cli.command()
+@click.option('--results-dir', type=click.Path(exists=True, path_type=Path), required=True, help='Directory containing optimization results (with optuna_summary.csv)')
+@click.option('--output-dir', type=click.Path(path_type=Path), help='Output directory for analysis (default: results-dir/comprehensive_analysis)')
+def analyze_all_runs(
+    results_dir: Path,
+    output_dir: Optional[Path],
+):
+    """Comprehensive analysis of all optimization runs.
+    
+    This command analyzes all runs (not just top N) to identify:
+    - Features that correlate with good/bad scores
+    - Parameter distributions in top vs bottom runs
+    - Correlation heatmaps and scatter plots
+    - Comprehensive HTML report
+    """
+    click.echo("=" * 80)
+    click.echo("Comprehensive Analysis of All Runs")
+    click.echo("=" * 80)
+    click.echo(f"Results directory: {results_dir}")
+    click.echo("")
+    
+    try:
+        results = run_comprehensive_analysis(results_dir, output_dir)
+        
+        if "error" in results:
+            click.echo(f"ERROR: {results['error']}", err=True)
+            sys.exit(1)
+        
+        output_path = Path(results["output_dir"])
+        click.echo("Analysis complete!")
+        click.echo("")
+        click.echo("Generated files:")
+        click.echo(f"  ✓ {output_path / 'report.html'} - Complete HTML report with all plots embedded")
+        click.echo(f"  ✓ {output_path / 'correlations.csv'} - Parameter correlations")
+        click.echo(f"  ✓ {output_path / 'comparison.json'} - Good vs bad run comparison")
+        click.echo("")
+        click.echo(f"Open {output_path / 'report.html'} in your browser to view the complete report.")
+        click.echo("")
+        
+        if results.get("correlations"):
+            click.echo("Top 10 Correlated Parameters:")
+            for i, corr in enumerate(results["correlations"][:10], 1):
+                click.echo(f"  {i:2d}. {corr['parameter']:25s} {corr['correlation']:.4f}")
+            click.echo("")
+        
+    except Exception as e:
+        click.echo(f"ERROR: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 
 def main():

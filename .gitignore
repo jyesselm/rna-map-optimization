@@ -90,4 +90,5 @@ test/**/dag.html
 
 # Ignore entire test directory - test files should not be committed
 test/
+test_results/
 

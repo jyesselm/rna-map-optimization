@@ -1,4 +1,0 @@
-Error: the match penalty is greater than 0 (2) but the --score-min function can be less than or equal to zero.  Either let the match penalty be 0 or make --score-min always positive.
-Error: Encountered internal Bowtie 2 exception (#1)
-Command: /Users/jyesselman2/micromamba/envs/py3/bin/bowtie2-align-s --wrapper basic-0 --local --no-discordant --no-mixed -L 16 -X 700 -N 1 --score-min L,0,-0.2 --rdg 8,4 -i S,1,1.5 --n-ceil L,0,0.15 -D 20 -R 3 -I 50 -x test_results/case_1/index/test -p 10 --passthrough -1 test_cases/case_1/test_mate1.fastq -2 test_cases/case_1/test_mate2.fastq 
-(ERR): bowtie2-align exited with value 1

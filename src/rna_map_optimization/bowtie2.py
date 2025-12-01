@@ -10,46 +10,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-try:
-    from rna_map_mini.logger import get_logger
-except ImportError:
-    try:
-        from rna_map_mini.core.logger import get_logger
-    except ImportError:
-        import logging
-
-        logging.basicConfig(level=logging.INFO)
-
-        def get_logger(name: str):
-            """Create a logger instance."""
-            logger = logging.getLogger(name)
-            if not logger.handlers:
-                handler = logging.StreamHandler()
-                formatter = logging.Formatter(
-                    "%(name)s - %(levelname)s - %(message)s"
-                )
-                handler.setFormatter(formatter)
-                logger.addHandler(handler)
-                logger.setLevel(logging.INFO)
-            return logger
-
-try:
-    from rna_map_mini.analysis.bit_vector_iterator import BitVectorIterator
-    from rna_map_mini.analysis.mutation_histogram import MutationHistogram
-except ImportError:
-    try:
-        from rna_map_mini.core.bit_vector_iterator import BitVectorIterator
-        from rna_map_mini.core.mutation_histogram import MutationHistogram
-    except ImportError:
-        try:
-            from rna_map_mini.bit_vector_iterator import BitVectorIterator
-            from rna_map_mini.mutation_histogram import MutationHistogram
-        except ImportError:
-            raise ImportError(
-                "Could not import BitVectorIterator or MutationHistogram from rna_map_mini. "
-                "Please ensure rna-map-mini is installed: "
-                "pip install git+https://github.com/jyesselm/rna-map-mini.git"
-            )
+from rna_map_mini.analysis.bit_vector_iterator import BitVectorIterator
+from rna_map_mini.analysis.mutation_histogram import MutationHistogram
+from rna_map_mini.logger import get_logger
 
 log = get_logger("BOWTIE2_UTILS")
 
@@ -148,9 +111,7 @@ def parse_sam_quality(
             mapq_counts[mapq] = mapq_counts.get(mapq, 0) + 1
 
             if mapq >= mapq_cutoff:
-                metrics["high_quality_alignments"] = (
-                    int(metrics["high_quality_alignments"]) + 1
-                )
+                metrics["high_quality_alignments"] = int(metrics["high_quality_alignments"]) + 1
 
     if mapq_scores:
         metrics["avg_mapq"] = sum(mapq_scores) / len(mapq_scores)
@@ -230,9 +191,7 @@ def run_bowtie2_alignment(
 
     start_time = time.time()
     with open(stderr_file, "w") as stderr:
-        result = subprocess.run(
-            cmd, stderr=stderr, stdout=subprocess.PIPE, text=True
-        )
+        result = subprocess.run(cmd, stderr=stderr, stdout=subprocess.PIPE, text=True)
 
     elapsed_time = time.time() - start_time
 
@@ -283,9 +242,7 @@ def generate_bit_vectors_and_analyze(
     try:
         mut_histos: Dict[str, MutationHistogram] = {}
         for ref_name, ref_seq in ref_seqs.items():
-            mut_histos[ref_name] = MutationHistogram(
-                ref_name, ref_seq, "DMS", 1, len(ref_seq)
-            )
+            mut_histos[ref_name] = MutationHistogram(ref_name, ref_seq, "DMS", 1, len(ref_seq))
 
         iterator = BitVectorIterator(
             sam_file, ref_seqs, paired=paired, use_pysam=False, qscore_cutoff=qscore_cutoff
@@ -330,9 +287,7 @@ def generate_bit_vectors_and_analyze(
 
                 mh.num_of_mutations[total_muts] += 1
 
-            mut_count = sum(
-                1 for v in bit_vector.data.values() if v in ["A", "C", "G", "T"]
-            )
+            mut_count = sum(1 for v in bit_vector.data.values() if v in ["A", "C", "G", "T"])
             metrics["mutation_distribution"][mut_count] += 1
             metrics["total_mutations"] += mut_count
 
@@ -350,13 +305,16 @@ def generate_bit_vectors_and_analyze(
                 try:
                     snr = mh.get_signal_to_noise()
                     # Check if SNR is valid (not NaN or None)
-                    if snr is None or (isinstance(snr, float) and (snr != snr or snr == float('inf') or snr == float('-inf'))):
+                    if snr is None or (
+                        isinstance(snr, float)
+                        and (snr != snr or snr == float("inf") or snr == float("-inf"))
+                    ):
                         log.warning(f"Invalid SNR for {ref_name}: {snr}, using 0.0")
                         snr = 0.0
                 except Exception as e:
                     log.warning(f"Error calculating SNR for {ref_name}: {e}, using 0.0")
                     snr = 0.0
-                
+
                 total_snr += snr * mh.num_aligned
                 total_weight += mh.num_aligned
 
@@ -386,6 +344,7 @@ def generate_bit_vectors_and_analyze(
     except Exception as e:
         log.warning(f"Error generating bit vectors: {e}")
         import traceback
+
         log.warning(f"Traceback: {traceback.format_exc()}")
 
     return metrics
@@ -437,4 +396,3 @@ def params_to_bowtie2_args(params: Dict) -> List[str]:
                 args.extend([flag_map[key], str(value)])
 
     return args
-

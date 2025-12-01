@@ -20,6 +20,10 @@ From: continuumio/miniconda3:latest
         git \
         && rm -rf /var/lib/apt/lists/*
 
+    # Configure git to allow cloning into /tmp (fixes "dubious ownership" error)
+    # This is needed for pip to clone rna-map-mini from GitHub
+    git config --global --add safe.directory '*'
+
     # Create conda environment from environment.yml
     # rna-map-mini will be installed automatically via pip from environment.yml
     /opt/conda/bin/conda env create -f /opt/environment.yml -n rna-map-optimization

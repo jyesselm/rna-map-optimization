@@ -214,6 +214,27 @@ rna-map-optimize analyze-parameters \
     --output FILE           # JSON output (optional)
 ```
 
+### Comprehensive Analysis (All Runs)
+```bash
+rna-map-optimize analyze-all-runs \
+    --results-dir DIR      # Results directory (with optuna_summary.csv)
+    --output-dir DIR       # Output directory (default: results-dir/comprehensive_analysis)
+```
+
+This command analyzes **all runs** (not just top N) to identify:
+- Features that correlate with good/bad scores
+- Parameter distributions in top 10% vs bottom 10% runs
+- Interactive visualizations (correlation heatmaps, scatter plots, distributions)
+- Comprehensive HTML report with all findings
+
+Generated outputs:
+- `report.html` - Main HTML report with summary statistics and findings
+- `correlations.csv` - Parameter correlations with quality score
+- `comparison.json` - Good vs bad run comparison data
+- `correlation_heatmap.html` - Interactive correlation heatmap
+- `distribution_*.html` - Feature distribution plots
+- `scatter_*.html` - Scatter plots of parameters vs quality score
+
 ## Directory Structure
 
 ```
