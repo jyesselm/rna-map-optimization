@@ -54,16 +54,16 @@ if [ ! -f "$DOCKERFILE" ]; then
 fi
 
 # Check if environment file exists
-ENV_FILE="${PROJECT_ROOT}/environment_optuna.yml"
+ENV_FILE="${PROJECT_ROOT}/environment.yml"
 if [ ! -f "$ENV_FILE" ]; then
     echo "ERROR: Environment file not found: $ENV_FILE"
     exit 1
 fi
 
-# Check if src/rna_map exists
-RNA_MAP_DIR="${PROJECT_ROOT}/src/rna_map"
-if [ ! -d "$RNA_MAP_DIR" ]; then
-    echo "ERROR: rna_map package directory not found: $RNA_MAP_DIR"
+# Verify environment.yml exists (rna-map-mini is installed via pip from GitHub)
+ENV_FILE="${PROJECT_ROOT}/environment.yml"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "ERROR: environment.yml not found: $ENV_FILE"
     exit 1
 fi
 
@@ -141,8 +141,8 @@ else
     echo "Option 1: Build from definition file on cluster (RECOMMENDED):"
     echo "  # Transfer files to cluster:"
     echo "  scp scripts/optimization/rna-map-optimization.def user@cluster:/path/"
-    echo "  scp environment_optuna.yml user@cluster:/path/"
-    echo "  scp -r src/rna_map user@cluster:/path/src/"
+                echo "  scp environment.yml user@cluster:/path/"
+                echo "  # No need to transfer src/rna_map - rna-map-mini installed from GitHub"
     echo "  # On cluster:"
     echo "  apptainer build rna-map-optimization.sif rna-map-optimization.def"
     echo ""

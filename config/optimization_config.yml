@@ -1,0 +1,266 @@
+# Global optimization settings
+
+optimization:
+  # Number of parameter combinations to test (for grid search)
+  max_combinations: 200000
+
+  # Number of trials for Optuna-based optimization (if using optuna script)
+  n_trials: 20000
+
+  # Read length assumption
+  read_length: 150
+
+  # Threads per alignment
+  threads: 8
+
+  # MAPQ cutoff for high-quality alignments
+  mapq_cutoff: 20
+
+  # Quality score cutoff for bit vectors
+  qscore_cutoff: 25
+
+  # Parameter search ranges for Optuna optimization
+  parameters:
+    seed_length:
+      type: int
+      min: 10
+      max: 30
+      step: 2
+
+    maxins:
+      type: int
+      min: 100
+      max: 1200
+      step: 100
+
+    seed_mismatches:
+      type: int
+      min: 0
+      max: 1
+
+    score_min:
+      type: categorical
+      options:
+        - null
+        - "L,0,0.2"
+        - "L,0,0.3"
+        - "L,5,0.1"
+        - "L,10,0.2"
+        - "L,15,0.1"
+        - "L,0,-0.6"
+        - "L,0,-0.4"
+        - "L,0,-0.2"
+        - "L,-0.6,-0.6"
+        - "G,15,0.1"
+        - "G,20,8"
+        - "G,20,15"
+        - "G,25,10"
+        - "G,30,12"
+        - "G,30,15"
+        - "S,10,0.1"
+        - "S,15,0.2"
+        - "S,20,0.15"
+        - "S,25,0.2"
+        - "S,30,0.1"
+
+    mismatch_penalty:
+      type: categorical
+      options:
+        - null
+        - "6,2"
+        - "4,2"
+        - "2,2"
+
+    gap_penalty_read:
+      type: categorical
+      options:
+        - null
+        - "5,3"
+        - "6,4"
+        - "8,4"
+
+    gap_penalty_ref:
+      type: categorical
+      options:
+        - null
+        - "5,3"
+        - "6,4"
+        - "8,4"
+
+    sensitivity_mode:
+      type: categorical
+      options:
+        - null
+        - "very-fast-local"
+        - "fast-local"
+        - "sensitive-local"
+        - "very-sensitive-local"
+
+    seed_interval:
+      type: categorical
+      options:
+        - null
+        - "S,1,0.5"
+        - "S,1,0.75"
+        - "S,1,1.15"
+        - "S,1,1.5"
+        - "S,1,2.0"
+
+    np_penalty:
+      type: categorical
+      options:
+        - null
+        - 0
+        - 1
+        - 2
+        - 3
+
+    n_ceil:
+      type: categorical
+      options:
+        - null
+        - "L,0,0.1"
+        - "L,0,0.15"
+        - "L,0,0.2"
+        - "L,0,0.3"
+
+    gbar:
+      type: categorical
+      options:
+        - null
+        - 0
+        - 2
+        - 4
+        - 6
+        - 8
+        - 10
+
+    match_bonus:
+      type: categorical
+      options:
+        - null
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+
+    extension_effort:
+      type: categorical
+      options:
+        - null
+        - 5
+        - 10
+        - 15
+        - 20
+        - 25
+
+    repetitive_effort:
+      type: categorical
+      options:
+        - null
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+
+    minins:
+      type: categorical
+      options:
+        - null
+        - 0
+        - 50
+        - 100
+        - 150
+
+    # Quality filtering parameters (post-alignment)
+    mapq_cutoff:
+      type: int
+      min: 10
+      max: 40
+      step: 5
+      description: "MAPQ cutoff for filtering high-quality alignments"
+
+    qscore_cutoff:
+      type: int
+      min: 20
+      max: 30
+      step: 5
+      description: "Quality score cutoff for bit vector generation"
+
+    # Quality score weighting (must sum to 1.0)
+    # These weights control the relative importance of different metrics
+    quality_score_weights:
+      type: categorical
+      options:
+        # Format: [snr_weight, alignment_rate_weight, mapq_weight, bv_acceptance_weight]
+        - [0.40, 0.30, 0.20, 0.10]  # Default: prioritize SNR
+        - [0.50, 0.25, 0.15, 0.10]  # More emphasis on SNR
+        - [0.35, 0.35, 0.20, 0.10]  # Balance SNR and alignment rate
+        - [0.30, 0.40, 0.20, 0.10]  # Prioritize alignment rate
+        - [0.40, 0.25, 0.25, 0.10]  # More emphasis on MAPQ
+        - [0.45, 0.30, 0.15, 0.10]  # SNR-focused with good alignment
+        - [0.50, 0.20, 0.20, 0.10]  # SNR and quality focused
+
+    # SNR normalization factor
+    snr_normalization_factor:
+      type: float
+      min: 5.0
+      max: 15.0
+      step: 2.5
+      description: "Factor to normalize SNR for quality score (default: 10.0)"
+
+    # Alignment rate threshold for early pruning (0-1.0)
+    min_alignment_rate:
+      type: categorical
+      options:
+        - 0.20
+        - 0.25
+        - 0.30
+        - 0.35
+        - 0.40
+      description: "Minimum alignment rate to avoid early pruning (default: 0.30)"
+
+
+# Cluster job settings
+
+cluster:
+  # Default time limit per job (format: HH:MM:SS)
+  time: "24:00:00"
+
+  # Default memory per job
+  memory: "16G"
+
+  # Default CPUs per job
+  cpus: 8
+
+  # Email for job notifications (optional)
+  email: null
+
+  # Job name prefix
+  job_name_prefix: "bt2_opt"
+
+  # Container path (Apptainer/Singularity .sif file)
+  # If set, jobs will use the container instead of conda environment
+  # Leave as null to use conda environment or set via CONTAINER_PATH env var
+  container_path: "/lustre/work/yesselmanlab/jyesselm/installs/rna_map_nextflow/rna-map-optimization.sif"
+
+# Output settings
+
+output:
+  # Base directory for all optimization results
+  base_dir: "optimization_results"
+
+  # Keep intermediate files (SAM files, etc.)
+  keep_intermediates: false
+
+# Per-case overrides (optional)
+# You can override settings for specific cases by adding entries here
+case_overrides:
+  # Example:
+  # case_1:
+  #   max_combinations: 500
+  #   time: "48:00:00"
+  #   memory: "32G"
+

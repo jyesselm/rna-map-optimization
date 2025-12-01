@@ -7,10 +7,10 @@ Since you don't have Docker on the cluster, the best approach is to build the Ap
 ### Step 1: Transfer Required Files to Cluster
 
 ```bash
-# From your local machine
-scp scripts/optimization/rna-map-optimization.def user@cluster:/work/yesselmanlab/jyesselm/installs/rna_map_nextflow/
-scp environment_optuna.yml user@cluster:/work/yesselmanlab/jyesselm/installs/rna_map_nextflow/
-scp -r src/rna_map user@cluster:/work/yesselmanlab/jyesselm/installs/rna_map_nextflow/src/
+# From your local machine (from project root)
+scp scripts/container/rna-map-optimization.def user@cluster:/path/on/cluster/
+scp environment.yml user@cluster:/path/on/cluster/
+scp -r scripts/ user@cluster:/path/on/cluster/
 ```
 
 ### Step 2: Build on Cluster
@@ -19,11 +19,11 @@ scp -r src/rna_map user@cluster:/work/yesselmanlab/jyesselm/installs/rna_map_nex
 # SSH to cluster
 ssh user@cluster
 
-# Navigate to project directory
-cd /work/yesselmanlab/jyesselm/installs/rna_map_nextflow
+# Navigate to directory with files
+cd /path/on/cluster
 
 # Build container (requires fakeroot or sudo)
-apptainer build rna-map-optimization.sif scripts/optimization/rna-map-optimization.def
+apptainer build rna-map-optimization.sif rna-map-optimization.def
 ```
 
 **If you have fakeroot capability:**
@@ -39,8 +39,8 @@ sudo apptainer build rna-map-optimization.sif scripts/optimization/rna-map-optim
 ### Step 3: Use Container
 
 ```bash
-export CONTAINER_PATH=/work/yesselmanlab/jyesselm/installs/rna_map_nextflow/rna-map-optimization.sif
-bash scripts/optimization/submit_optimization_jobs.sh
+export CONTAINER_PATH=/path/on/cluster/rna-map-optimization.sif
+bash scripts/cluster/submit_optimization_jobs.sh
 ```
 
 ## Method 2: Use Conda Environment (No Container)
@@ -48,11 +48,12 @@ bash scripts/optimization/submit_optimization_jobs.sh
 If building the container is problematic, use conda environment instead:
 
 ```bash
-# On cluster
-bash scripts/optimization/setup_optimization_env.sh
+# On cluster - create environment
+conda env create -f environment.yml
+conda activate rna-map-optimization
 
 # Then run optimization (no container needed)
-bash scripts/optimization/submit_optimization_jobs.sh
+bash scripts/cluster/submit_optimization_jobs.sh
 ```
 
 ## Method 3: Transfer Docker Image and Convert (If Docker Available)
@@ -84,15 +85,15 @@ CLUSTER_HOST="cluster.hostname"
 CLUSTER_PATH="/work/yesselmanlab/jyesselm/installs/rna_map_nextflow"
 
 echo "Transferring files to cluster..."
-scp scripts/optimization/rna-map-optimization.def ${CLUSTER_USER}@${CLUSTER_HOST}:${CLUSTER_PATH}/
-scp environment_optuna.yml ${CLUSTER_USER}@${CLUSTER_HOST}:${CLUSTER_PATH}/
-scp -r src/rna_map ${CLUSTER_USER}@${CLUSTER_HOST}:${CLUSTER_PATH}/src/
+scp scripts/container/rna-map-optimization.def ${CLUSTER_USER}@${CLUSTER_HOST}:${CLUSTER_PATH}/
+scp environment.yml ${CLUSTER_USER}@${CLUSTER_HOST}:${CLUSTER_PATH}/
+scp -r scripts/ ${CLUSTER_USER}@${CLUSTER_HOST}:${CLUSTER_PATH}/
 
 echo "✅ Files transferred!"
 echo ""
 echo "On cluster, run:"
 echo "  cd ${CLUSTER_PATH}"
-echo "  apptainer build rna-map-optimization.sif scripts/optimization/rna-map-optimization.def"
+echo "  apptainer build --fakeroot rna-map-optimization.sif rna-map-optimization.def"
 ```
 
 ## Troubleshooting

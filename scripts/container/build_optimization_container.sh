@@ -2,7 +2,7 @@
 # Build Apptainer/Singularity container for optimization workflow
 #
 # This script builds a container image with all dependencies for running
-# Bowtie2 parameter optimization, including Optuna and the rna_map package.
+# Bowtie2 parameter optimization, including Optuna and rna-map-mini package.
 #
 # Usage:
 #   ./scripts/optimization/build_optimization_container.sh [output_path]
@@ -50,16 +50,15 @@ if [ ! -f "$DEF_FILE" ]; then
 fi
 
 # Check if environment file exists
-ENV_FILE="${PROJECT_ROOT}/environment_optuna.yml"
+ENV_FILE="${PROJECT_ROOT}/environment.yml"
 if [ ! -f "$ENV_FILE" ]; then
     echo "ERROR: Environment file not found: $ENV_FILE"
     exit 1
 fi
 
-# Check if src/rna_map exists
-RNA_MAP_DIR="${PROJECT_ROOT}/src/rna_map"
-if [ ! -d "$RNA_MAP_DIR" ]; then
-    echo "ERROR: rna_map package directory not found: $RNA_MAP_DIR"
+# Verify environment.yml exists (rna-map-mini is installed via pip from GitHub)
+if [ ! -f "$ENV_FILE" ]; then
+    echo "ERROR: environment.yml not found: $ENV_FILE"
     exit 1
 fi
 

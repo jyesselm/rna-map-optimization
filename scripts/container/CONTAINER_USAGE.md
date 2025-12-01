@@ -26,7 +26,14 @@ Build on your local machine, then transfer to cluster:
 
 ```bash
 # On your local machine (with Docker)
-bash scripts/optimization/build_with_docker.sh rna-map-optimization.sif
+# Build Docker image
+docker build -f scripts/container/Dockerfile -t rna-map-optimization:latest ..
+
+# Build Apptainer/Singularity from Docker
+apptainer build rna-map-optimization.sif docker-daemon://rna-map-optimization:latest
+
+# Or build directly with Apptainer
+apptainer build --fakeroot rna-map-optimization.sif scripts/container/rna-map-optimization.def
 
 # Transfer to cluster
 scp rna-map-optimization.sif user@cluster:/path/to/destination/
@@ -49,9 +56,9 @@ bash scripts/optimization/build_optimization_container.sh rna-map-optimization.s
 **Requires**: Fakeroot capability or sudo access
 
 The build process:
-1. Creates conda environment from `environment_optuna.yml`
+1. Creates conda environment from `environment.yml`
 2. Installs Bowtie2, Python dependencies, and Optuna
-3. Installs `rna_map` package from `src/rna_map/`
+3. Installs `rna-map-mini` package from GitHub (via pip in environment.yml)
 4. Packages everything into a single `.sif` file
 
 **Build time**: ~10-20 minutes (depending on network speed)
@@ -83,8 +90,8 @@ The build process:
 ### Verify Container
 
 ```bash
-# Test that rna_map is installed
-apptainer exec rna-map-optimization.sif python -c "import rna_map; print('✓ rna_map installed')"
+# Test that rna-map-mini is installed
+apptainer exec rna-map-optimization.sif python -c "import rna_map_mini; print('✓ rna-map-mini installed')"
 
 # Test that Bowtie2 is available
 apptainer exec rna-map-optimization.sif bowtie2 --version
@@ -143,7 +150,7 @@ The container includes:
 - **Python 3.10+** with conda
 - **Bowtie2** aligner
 - **Optuna** for Bayesian optimization
-- **rna_map** package (installed from `src/rna_map/`)
+- **rna-map-mini** package (installed from GitHub)
 - **All Python dependencies** (pandas, numpy, pyyaml, tabulate, plotly)
 
 ## Job Script Example
@@ -209,7 +216,7 @@ apptainer exec -B /path/to/data:/data rna-map-optimization.sif ls /data
 ### Import errors
 ```bash
 # Test imports inside container
-apptainer exec rna-map-optimization.sif python -c "import rna_map; import optuna; print('OK')"
+apptainer exec rna-map-optimization.sif python -c "import rna_map_mini; import optuna; print('OK')"
 ```
 
 ## Best Practices

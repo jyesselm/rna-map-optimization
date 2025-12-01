@@ -6,14 +6,14 @@ build-backend = "setuptools.build_meta"
 name = "rna-map-optimization"
 version = "0.1.0"
 description = "Parameter optimization toolkit for RNA-MAP workflows"
-requires-python = ">=3.10"
-license = {text = "MIT"}
+requires-python = ">=3.9"
+license = "MIT"
 authors = [
   { name = "Joe Yesselman", email = "jyesselm@unl.edu" }
 ]
 readme = "README.md"
 dependencies = [
-    "rna-map>=1.0.0",  # From main rna-map-nextflow repository
+    "rna-map-mini @ git+https://github.com/jyesselm/rna-map-mini.git",
     "optuna>=3.0",
     "plotly>=5.0",
     "pandas>=1.5",
@@ -33,6 +33,7 @@ dev = [
 rna-map-optimize = "rna_map_optimization.cli:main"
 
 [tool.setuptools]
+package-dir = {"" = "src"}
 packages = ["rna_map_optimization"]
 
 [tool.black]

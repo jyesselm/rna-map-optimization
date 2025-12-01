@@ -15,14 +15,53 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 
-# rna-map package should be installed from main repository:
-# pip install git+https://github.com/jyesselm/rna_map_nextflow.git#subdirectory=python
-# Or if published to PyPI: pip install rna-map
+# rna-map-mini package should be installed:
+# pip install git+https://github.com/jyesselm/rna-map-mini.git
 
-from rna_map.io.fasta import fasta_to_dict
-from rna_map.logger import get_logger
-from rna_map.analysis.bit_vector_iterator import BitVectorIterator
-from rna_map.analysis.mutation_histogram import MutationHistogram
+# Try to import from rna_map_mini
+try:
+    from rna_map_mini.io.fasta import fasta_to_dict
+except ImportError:
+    try:
+        from rna_map_mini.core.fasta import fasta_to_dict
+    except ImportError:
+        # Fallback: implement locally or use utility
+        from rna_map_optimization.utils import fasta_to_dict
+
+try:
+    from rna_map_mini.logger import get_logger
+except ImportError:
+    try:
+        from rna_map_mini.core.logger import get_logger
+    except ImportError:
+        import logging
+        logging.basicConfig(level=logging.INFO)
+        def get_logger(name: str):
+            logger = logging.getLogger(name)
+            if not logger.handlers:
+                handler = logging.StreamHandler()
+                formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+                handler.setFormatter(formatter)
+                logger.addHandler(handler)
+                logger.setLevel(logging.INFO)
+            return logger
+
+try:
+    from rna_map_mini.analysis.bit_vector_iterator import BitVectorIterator
+    from rna_map_mini.analysis.mutation_histogram import MutationHistogram
+except ImportError:
+    try:
+        from rna_map_mini.core.bit_vector_iterator import BitVectorIterator
+        from rna_map_mini.core.mutation_histogram import MutationHistogram
+    except ImportError:
+        try:
+            from rna_map_mini.bit_vector_iterator import BitVectorIterator
+            from rna_map_mini.mutation_histogram import MutationHistogram
+        except ImportError:
+            raise ImportError(
+                "Could not import BitVectorIterator or MutationHistogram from rna_map_mini. "
+                "Please install rna-map-mini: pip install git+https://github.com/jyesselm/rna-map-mini.git"
+            )
 
 log = get_logger("BASELINE_TEST")
 

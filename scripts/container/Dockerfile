@@ -8,19 +8,18 @@ RUN apt-get update && apt-get install -y \
         git \
         && rm -rf /var/lib/apt/lists/*
 
-# Copy environment file, package source, and optimization scripts
-COPY environment_optuna.yml /opt/environment_optuna.yml
-COPY src/rna_map /opt/src/rna_map
-COPY scripts/optimization /opt/scripts/optimization
+# Copy environment file and optimization scripts
+COPY environment.yml /opt/environment.yml
+COPY scripts/ /opt/scripts/
 
-# Create conda environment from environment_optuna.yml
-RUN /opt/conda/bin/conda env create -f /opt/environment_optuna.yml -n rna-map-optimization
+# Create conda environment from environment.yml
+RUN /opt/conda/bin/conda env create -f /opt/environment.yml -n rna-map-optimization
 
-# Activate environment and install rna_map package
+# Activate environment (rna-map-mini will be installed via pip from environment.yml)
+# The environment.yml already includes rna-map-mini in pip dependencies
 RUN . /opt/conda/etc/profile.d/conda.sh && \
         conda activate rna-map-optimization && \
-        cd /opt/src/rna_map && \
-        python -m pip install -e .
+        echo "rna-map-mini will be installed from GitHub via environment.yml"
 
 # Clean up conda cache
 RUN /opt/conda/bin/conda clean -afy
@@ -29,7 +28,7 @@ RUN /opt/conda/bin/conda clean -afy
 RUN mkdir -p /data /results /work
 
 # Make optimization scripts executable
-RUN chmod +x /opt/scripts/optimization/*.sh /opt/scripts/optimization/*.py 2>/dev/null || true
+RUN chmod +x /opt/scripts/*.sh /opt/scripts/*.py 2>/dev/null || true
 
 # Set PATH to include conda environment bin directory
 ENV PATH=/opt/conda/envs/rna-map-optimization/bin:/opt/conda/bin:$PATH
@@ -40,4 +39,3 @@ WORKDIR /work
 
 # Default command
 CMD ["/opt/conda/envs/rna-map-optimization/bin/python"]
-

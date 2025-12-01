@@ -51,6 +51,7 @@ test/*/best_parameters.json
 test/*/baseline_results.json
 test/*/optuna_summary.csv
 test/*/visualizations/
+test_output/
 
 # Large data files - alignment files
 *.sam

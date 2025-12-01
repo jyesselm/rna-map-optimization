@@ -22,8 +22,8 @@ source ~/.bashrc
 Test that the container is accessible and imports work:
 
 ```bash
-# Test rna_map import
-apptainer exec $CONTAINER_PATH python -c "import rna_map; print('✓ rna_map installed')"
+# Test rna-map-mini import
+apptainer exec $CONTAINER_PATH python -c "import rna_map_mini; print('✓ rna-map-mini installed')"
 
 # Test Optuna import
 apptainer exec $CONTAINER_PATH python -c "import optuna; print('✓ optuna installed')"
@@ -122,7 +122,7 @@ echo $CONTAINER_PATH
 ### Import errors in container
 ```bash
 # Test imports
-apptainer exec $CONTAINER_PATH python -c "import rna_map; import optuna; print('OK')"
+apptainer exec $CONTAINER_PATH python -c "import rna_map_mini; import optuna; print('OK')"
 ```
 
 ### Jobs failing

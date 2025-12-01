@@ -17,43 +17,33 @@ This repository provides tools for optimizing Bowtie2 alignment parameters for R
 
 ### Prerequisites
 
-1. **Install the main RNA-MAP package** (required dependency):
-
-   ```bash
-   # Option 1: Install from GitHub (recommended)
-   pip install git+https://github.com/jyesselm/rna_map_nextflow.git#subdirectory=python
-   
-   # Option 2: If published to PyPI
-   pip install rna-map
-   ```
-
-2. **Install optimization toolkit**:
+1. **Install optimization toolkit**:
 
    ```bash
    # Clone this repository
    git clone https://github.com/jyesselm/rna-map-optimization.git
    cd rna-map-optimization
    
-   # Install dependencies
+   # Install dependencies (rna-map-mini will be installed automatically)
    conda env create -f environment.yml
    conda activate rna-map-optimization
    
-   # Or install via pip (if packaged)
+   # Install the package
    pip install -e .
    ```
 
 ### Quick Setup
 
 ```bash
-# 1. Install main RNA-MAP package
-pip install git+https://github.com/jyesselm/rna_map_nextflow.git#subdirectory=python
-
-# 2. Setup optimization environment
+# 1. Setup optimization environment
 conda env create -f environment.yml
 conda activate rna-map-optimization
 
+# 2. Install package (rna-map-mini installed automatically)
+pip install -e .
+
 # 3. Verify installation
-python scripts/optimize_bowtie2_params_optuna.py --help
+rna-map-optimize --help
 ```
 
 ## Quick Start
@@ -66,16 +56,62 @@ Recommended parameters from optimization are available in:
 
 ### Run Your Own Optimization
 
-#### Local Optimization (Optuna - Recommended)
+#### Example: Run with Test Case
+
+Try the optimization with the included test case:
 
 ```bash
-python scripts/optimize_bowtie2_params_optuna.py \
+# Activate environment
+conda activate rna-map-optimization
+
+# Run optimization with test_cases/case_1
+rna-map-optimize \
+    --case-dir test_cases/case_1 \
+    --n-trials 50 \
+    --output-dir test_results
+
+# The tool automatically detects:
+# - test.fasta (reference)
+# - test_mate1.fastq (R1 reads)
+# - test_mate2.fastq (R2 reads)
+```
+
+Results will be saved to `test_results/case_1/` including:
+- Best parameter combinations
+- Optimization history visualizations
+- Trial results and statistics
+
+#### Local Optimization (Optuna - Recommended)
+
+**Option 1: Single case directory (auto-detects files) - Recommended**
+```bash
+rna-map-optimize \
+    --case-dir /path/to/case \
+    --n-trials 100 \
+    --output-dir optimization_results
+```
+The tool automatically finds `*.fasta`/`*.fa` and `*_R1*.fastq`/`*_R2*.fastq` files in the directory.
+
+**Option 2: Explicit file paths**
+```bash
+rna-map-optimize \
     --fasta reference.fasta \
     --fastq1 reads_R1.fastq \
     --fastq2 reads_R2.fastq \
     --n-trials 100 \
     --output-dir optimization_results
 ```
+
+**Option 3: Batch mode (multiple cases)**
+```bash
+rna-map-optimize \
+    --cases-dir /path/to/cases \
+    --n-trials 100 \
+    --output-dir optimization_results
+```
+Processes all subdirectories as separate test cases.
+
+**Note**: You can also use `python -m rna_map_optimization.cli` instead of `rna-map-optimize` (they're equivalent).
 
 #### Grid Search Optimization
 
@@ -97,6 +133,44 @@ python scripts/run_baseline_test.py \
     --output-dir baseline_results
 ```
 
+#### Alignment Verification (Secondary Check)
+
+Verify alignments using alternative methods for small subsamples:
+
+```bash
+# Install optional verification dependencies
+pip install biopython  # or: pip install parasail
+
+# Verify alignments
+python scripts/verify_alignments.py \
+    --sam aligned.sam \
+    --fasta reference.fasta \
+    --fastq reads.fastq \
+    --method biopython \
+    --max-reads 100
+```
+
+See [docs/ALIGNMENT_VERIFICATION.md](./docs/ALIGNMENT_VERIFICATION.md) for details.
+
+#### View Alignments (Human-Readable)
+
+View alignments in a beautiful, human-readable format:
+
+```bash
+# Install optional rich library for colored output
+pip install rich
+
+# View alignments
+python scripts/view_alignments.py \
+    --sam aligned.sam \
+    --fasta reference.fasta \
+    --max-reads 10 \
+    --min-mapq 20 \
+    --output alignments.html
+```
+
+See [docs/VIEW_ALIGNMENTS.md](./docs/VIEW_ALIGNMENTS.md) for details.
+
 #### Cluster-Based Optimization
 
 For large-scale optimization on a cluster, see [scripts/README.md](./scripts/README.md) for detailed instructions.
@@ -111,17 +185,22 @@ rna-map-optimization/
 ├── environment.yml                # Conda environment
 ├── .gitignore                     # Git ignore rules
 │
-├── scripts/                       # Executable scripts
-│   ├── optimize_bowtie2_params_optuna.py  # Bayesian optimization (recommended)
-│   ├── optimize_bowtie2_params.py         # Grid search
-│   ├── run_baseline_test.py               # Baseline comparison
-│   ├── collect_top_results.py            # Result aggregation
-│   ├── cluster/                           # Cluster scripts
-│   └── container/                         # Container build scripts
+├── src/                           # Source code
+│   └── rna_map_optimization/      # Main package
+│       ├── cli.py                 # Command-line interface
+│       ├── optimizer.py           # Optuna-based optimization
+│       ├── bowtie2.py             # Bowtie2 utilities
+│       └── utils.py               # Utility functions
+│
+├── scripts/                       # Helper scripts and docs
+│   ├── cluster/                   # Cluster job scripts
+│   └── container/                 # Container build scripts
 │
 ├── docs/                          # Documentation
 │   ├── README.md                 # Documentation index
 │   ├── BEST_PARAMETERS.md        # Recommended parameters
+│   ├── ALIGNMENT_VERIFICATION.md # Alignment verification guide
+│   ├── VIEW_ALIGNMENTS.md        # Alignment viewer guide
 │   ├── TOP_100_PARAMETER_ANALYSIS.md  # Analysis results
 │   ├── recommended_params/      # Parameter files
 │   ├── examples/                 # Example scripts
@@ -172,10 +251,8 @@ See **[docs/TOP_100_PARAMETER_ANALYSIS.md](./docs/TOP_100_PARAMETER_ANALYSIS.md)
 
 ```bash
 conda activate rna-map-optimization
-python scripts/optimize_bowtie2_params_optuna.py \
-    --fasta test.fasta \
-    --fastq1 test_R1.fastq \
-    --fastq2 test_R2.fastq \
+rna-map-optimize \
+    --case-dir test_cases/case_1 \
     --n-trials 50 \
     --output-dir results
 ```
@@ -192,14 +269,14 @@ Optimization results include:
 - Comparison with baseline
 - Visualization of optimization history (Optuna)
 
-## Relationship to Main Repository
+## Relationship to RNA-MAP-Mini
 
-This optimization toolkit depends on the main [rna-map-nextflow](https://github.com/jyesselm/rna_map_nextflow) repository:
+This optimization toolkit depends on [rna-map-mini](https://github.com/jyesselm/rna-map-mini):
 
-- **Main repo**: Production workflow and pipeline code
+- **rna-map-mini**: Core Python package for RNA-MAP analysis
 - **This repo**: Parameter optimization and research tools
 
-The optimization code uses the `rna-map` Python package from the main repository to execute pipelines and evaluate results.
+The optimization code uses the `rna-map-mini` Python package to execute pipelines and evaluate results.
 
 ## Contributing
 
@@ -211,10 +288,10 @@ Apache License 2.0 - See [LICENSE](./LICENSE) file for details.
 
 ## Citation
 
-If you use this optimization toolkit, please cite the main RNA-MAP repository.
+If you use this optimization toolkit, please cite the rna-map-mini repository.
 
 ## Support
 
 For issues and questions:
 - Optimization-specific: Open an issue in this repository
-- Main workflow: Open an issue in [rna-map-nextflow](https://github.com/jyesselm/rna_map_nextflow)
+- Core analysis: Open an issue in [rna-map-mini](https://github.com/jyesselm/rna-map-mini)

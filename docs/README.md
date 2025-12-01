@@ -15,7 +15,7 @@ Recommended parameters from optimization are available in:
 1. **Install Optuna** (if not already installed):
    ```bash
    pip install optuna plotly
-   # Or: conda env create -f environment_optuna.yml
+   # conda env create -f environment.yml
    ```
 
 2. **Run optimization**:

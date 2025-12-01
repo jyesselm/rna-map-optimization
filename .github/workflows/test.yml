@@ -17,9 +17,9 @@ jobs:
         with:
           python-version: '3.10'
       
-      - name: Install main rna-map package
+      - name: Install rna-map-mini package
         run: |
-          pip install git+https://github.com/jyesselm/rna_map_nextflow.git#subdirectory=python
+          pip install git+https://github.com/jyesselm/rna-map-mini.git
       
       - name: Install dependencies
         run: |
@@ -27,7 +27,7 @@ jobs:
       
       - name: Check imports
         run: |
-          python -c "import rna_map; print('✅ rna-map imported')"
+          python -c "import rna_map_mini; print('✅ rna-map-mini imported')"
           python -c "import optuna; print('✅ optuna imported')"
       
       - name: Check script syntax

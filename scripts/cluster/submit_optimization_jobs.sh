@@ -226,8 +226,7 @@ conda activate ${ENV_NAME}
 # Change to project directory
 cd ${PROJECT_ROOT}
 
-# Ensure rna_map is installed from src/rna_map
-cd src/rna_map && pip install -e . --quiet && cd ../..
+# rna-map-mini is installed via pip in environment.yml (no need to install separately)
 
 # Run optimization
 echo "Running optimization for ${case_name}..."

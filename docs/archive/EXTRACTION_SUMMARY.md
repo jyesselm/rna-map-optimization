@@ -44,12 +44,12 @@ rna-map-optimization/
 
 ### 1. Updated Imports
 - Removed `PROJECT_ROOT` references
-- Updated import comments to reference main repo installation
-- All scripts now import from installed `rna-map` package
+- Updated import comments to reference rna-map-mini package installation
+- All scripts now import from installed `rna-map-mini` package
 
 ### 2. Package Structure
 - Created `src/rna_map_optimization/` package structure
-- Added `pyproject.toml` with dependency on `rna-map>=1.0.0`
+- Added `pyproject.toml` with dependency on `rna-map-mini>=0.1.0`
 - Set up for potential PyPI publishing
 
 ### 3. Documentation
@@ -69,7 +69,7 @@ rna-map-optimization/
 ## Dependencies
 
 The optimization repository depends on:
-- **rna-map** package from main repository (required)
+- **rna-map-mini** package (required)
 - **optuna** for Bayesian optimization
 - **plotly** for visualization
 - **pandas, numpy, pyyaml** for data handling
@@ -77,10 +77,10 @@ The optimization repository depends on:
 
 ## Installation
 
-Users must install the main `rna-map` package first:
+Users must install the `rna-map-mini` package first:
 
 ```bash
-pip install git+https://github.com/jyesselm/rna_map_nextflow.git#subdirectory=python
+pip install git+https://github.com/jyesselm/rna-map-mini.git
 ```
 
 Then install optimization toolkit:

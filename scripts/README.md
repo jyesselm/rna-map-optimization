@@ -33,7 +33,7 @@ bash scripts/optimization/build_optimization_container.sh rna-map-optimization.s
 
 This will:
 - Create a container image with all dependencies
-- Include Bowtie2, Python, Optuna, and rna_map package
+- Include Bowtie2, Python, Optuna, and rna-map-mini package
 - No need to manage conda environments on compute nodes
 - Results are written to mounted directories
 
@@ -59,7 +59,7 @@ bash scripts/optimization/setup_optimization_env.sh
 This will:
 - Create a conda environment named `rna-map-optimization`
 - Install Bowtie2, Python dependencies, and Optuna
-- Install the `rna_map` package in editable mode from `src/rna_map/`
+- Installs `rna-map-mini` package from GitHub via pip (included in environment.yml)
 
 ### 2. Prepare Test Cases
 
